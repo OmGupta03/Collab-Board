@@ -104,7 +104,7 @@ CollabBoard
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/collabboard.git
+git clone https://github.com/OmGupta03/Collab-Board
 cd collabboard
 ```
 
