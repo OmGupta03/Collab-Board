@@ -17,7 +17,7 @@ export default function JoinRoomModal({
       position: "fixed", inset: 0, background: "rgba(80,50,10,.25)",
       backdropFilter: "blur(3px)", display: "flex", alignItems: "center",
       justifyContent: "center", zIndex: 200
-    }}>
+    }}> 
       <div 
         className="mcard" 
         onClick={e => e.stopPropagation()} 
