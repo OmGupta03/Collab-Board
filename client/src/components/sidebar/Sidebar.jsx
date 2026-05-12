@@ -6,7 +6,8 @@ export default function Sidebar({
     open, tab, setTab,
     messages, typing, chatEndRef, chatInput,
     onTyping, onSend, onFileChange, uploading, fileInputRef,
-    onlineUsers, user, roomInfo, stringToColor
+    onlineUsers, user, roomInfo, stringToColor,
+    isHost, onGrantVideo, onRevokeVideo
 }) {
     return (
         <div style={{
@@ -37,6 +38,9 @@ export default function Sidebar({
                 <UsersList
                     onlineUsers={onlineUsers} user={user} roomInfo={roomInfo}
                     stringToColor={stringToColor}
+                    isHost={isHost}
+                    onGrantVideo={onGrantVideo}
+                    onRevokeVideo={onRevokeVideo}
                 />
             )}
         </div>

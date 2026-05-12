@@ -22,7 +22,9 @@ import useWhiteboardRoom from '../../hooks/useWhiteboardRoom';
 import useShapes from '../../hooks/useShapes';
 import useSocketEvents from '../../hooks/useSocketEvents';
 import useCanvasDrawing from '../../hooks/useCanvasDrawing';
+import useVideoChat from '../../hooks/useVideoChat';
 import { roomService } from "../../services/roomService.js";
+import VideoChat from './VideoChat';
 
 export default function WhiteboardRoom({ roomId, user, onLeave }) {
   /* ── canvas refs ──────────────────────────────────────── */
@@ -58,6 +60,8 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   const [showNotes, setShowNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [showTimer, setShowTimer] = useState(false);
+  const [hasVideoAccess, setHasVideoAccess] = useState(false);
+  const [showVideoChat, setShowVideoChat] = useState(true);
 
   /* ── Custom Hooks ───────────────────────────────────── */
   const { emit, on, off } = useSocket();
@@ -83,6 +87,39 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   useSocketEvents({
     roomId, on, off, canvasRef, setShapes, setMessages, setTyping, typingTimer, setOnlineUsers, stringToColor
   });
+
+  const { localStream, remoteStreams, isVideoOn, toggleVideo } = useVideoChat({
+    roomId, user, socket: { id: useSocket().socket?.id }, emit, on, off
+  });
+
+  const hostIdStr = roomInfo?.hostId?._id || roomInfo?.hostId;
+  const isHost = user?._id === hostIdStr;
+  const finalHasVideoAccess = isHost || hasVideoAccess;
+  const hasActiveVideoStreams = !!localStream || Object.keys(remoteStreams).length > 0;
+
+  useEffect(() => {
+    const handleGranted = ({ userId }) => {
+      if (userId === user._id) {
+        setHasVideoAccess(true);
+        toast.success("Host granted you video access!");
+      }
+    };
+    const handleRevoked = ({ userId }) => {
+      if (userId === user._id) {
+        setHasVideoAccess(false);
+        if (isVideoOn) toggleVideo();
+        toast("Video access revoked by host", { icon: '🚫' });
+      }
+    };
+
+    on("video:access_granted", handleGranted);
+    on("video:access_revoked", handleRevoked);
+
+    return () => {
+      off("video:access_granted", handleGranted);
+      off("video:access_revoked", handleRevoked);
+    };
+  }, [on, off, user._id, isVideoOn, toggleVideo]);
 
   const initialLoaded = useRef(false);
 
@@ -200,7 +237,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
     emit("draw:shape_delete", { roomId, shapeId: id });
   };
 
-  const canvasCursor = tool === "eraser" ? "cell" : tool === "pencil" || SHAPE_TOOLS.includes(tool) ? "crosshair" : "default";
+  const canvasCursor = !isHost ? "default" : tool === "eraser" ? "cell" : tool === "pencil" || SHAPE_TOOLS.includes(tool) ? "crosshair" : "default";
 
   const handleClearConfirm = () => {
     clearBoard();
@@ -232,25 +269,30 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
         roomId={roomId} onLeave={onLeave} onUndo={undo} onRedo={redo}
         shapeSnap={shapeSnap} onToggleSnap={() => { setShapeSnap(s => !s); setSnapStatus(""); setSnapError(""); }}
         snapStatus={snapStatus} snapError={snapError} onCopyRoomId={copyRoomId}
+        isHost={isHost}
       />
+
+      {showVideoChat && <VideoChat localStream={localStream} remoteStreams={remoteStreams} />}
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
 
-        <Toolbar
-          tool={tool} setTool={setTool} color={color} setColor={setColor}
-          brushSize={brushSize} setBrushSize={setBrushSize}
-          showPalette={showPalette} setShowPalette={setShowPalette}
-          showBrush={showBrush} setShowBrush={setShowBrush}
-          showAI={showAI} setShowAI={setShowAI}
-          onUndo={undo} onRedo={redo} onClearClick={() => setShowClear(true)}
-        />
+        {isHost && (
+          <Toolbar
+            tool={tool} setTool={setTool} color={color} setColor={setColor}
+            brushSize={brushSize} setBrushSize={setBrushSize}
+            showPalette={showPalette} setShowPalette={setShowPalette}
+            showBrush={showBrush} setShowBrush={setShowBrush}
+            showAI={showAI} setShowAI={setShowAI}
+            onUndo={undo} onRedo={redo} onClearClick={() => setShowClear(true)}
+          />
+        )}
 
         <div ref={scrollRef} onScroll={onScroll}
           style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative", cursor: canvasCursor }}
-          onMouseDown={(e) => onDown(e, () => { setShowPalette(false); setShowBrush(false); })}
-          onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onLeaveCanvas}
-          onTouchStart={(e) => onDown(e, () => { setShowPalette(false); setShowBrush(false); })}
-          onTouchMove={onMove} onTouchEnd={onUp}>
+          onMouseDown={(e) => isHost && onDown(e, () => { setShowPalette(false); setShowBrush(false); })}
+          onMouseMove={(e) => isHost && onMove(e)} onMouseUp={(e) => isHost && onUp(e)} onMouseLeave={(e) => isHost && onLeaveCanvas(e)}
+          onTouchStart={(e) => isHost && onDown(e, () => { setShowPalette(false); setShowBrush(false); })}
+          onTouchMove={(e) => isHost && onMove(e)} onTouchEnd={(e) => isHost && onUp(e)}>
 
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle,rgba(180,165,145,.45) 1.5px,transparent 1.5px)", backgroundSize: "24px 24px", pointerEvents: "none", zIndex: 0, minHeight: canvasH }} />
 
@@ -272,10 +314,11 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
 
           <ShapeLayer
             shapes={shapes} selectedId={selectedId} shapeDraft={shapeDraft} canvasH={canvasH}
-            onSelect={setSelectedId}
-            onDragStart={(id, ox, oy) => setDragInfo({ id, ox, oy })}
-            onResizeStart={(id, ox, oy, origW, origH) => setResizeInfo({ id, ox, oy, origW, origH })}
-            onDelete={deleteShape} onSvgClick={() => setSelectedId(null)}
+            onSelect={(id) => isHost && setSelectedId(id)}
+            onDragStart={(id, ox, oy) => isHost && setDragInfo({ id, ox, oy })}
+            onResizeStart={(id, ox, oy, origW, origH) => isHost && setResizeInfo({ id, ox, oy, origW, origH })}
+            onDelete={(id) => isHost && deleteShape(id)}
+            onSvgClick={() => isHost && setSelectedId(null)}
           />
 
           <div style={{ height: canvasH, minHeight: canvasH, pointerEvents: "none" }} />
@@ -293,6 +336,9 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
           onFileChange={handleFileShare} uploading={uploading} fileInputRef={fileInputRef}
           onlineUsers={onlineUsers} user={user} roomInfo={roomInfo}
           stringToColor={stringToColor}
+          isHost={isHost}
+          onGrantVideo={(id) => emit("video:grant_access", { roomId, userId: id })}
+          onRevokeVideo={(id) => emit("video:revoke_access", { roomId, userId: id })}
         />
       </div>
 
@@ -301,6 +347,8 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
         showTimer={showTimer} setShowTimer={setShowTimer} timerRunning={timerRunning} timerSecs={timerSecs}
         startScreenShare={startScreenShare} saveBoard={saveBoard} canvasPages={canvasPages}
         fmtTime={fmtTime}
+        isVideoOn={isVideoOn} toggleVideo={toggleVideo} hasVideoAccess={finalHasVideoAccess}
+        hasActiveVideoStreams={hasActiveVideoStreams} showVideoChat={showVideoChat} setShowVideoChat={setShowVideoChat}
       />
 
       {showAI && <AIPanel sidebarOpen={sidebarOpen} onClose={() => setShowAI(false)} onAction={runAI} loading={aiLoading} result={aiResult} />}

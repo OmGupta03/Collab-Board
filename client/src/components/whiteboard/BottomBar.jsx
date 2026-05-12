@@ -1,12 +1,14 @@
 import React from 'react';
-import { FileText, Timer, Monitor, Save } from 'lucide-react';
+import { FileText, Timer, Monitor, Save, Video, VideoOff, Eye, EyeOff } from 'lucide-react';
 import { WB_PANEL, BORDER, TSUB } from './constants';
 
 export default function BottomBar({
     showNotes, setShowNotes,
     showTimer, setShowTimer, timerRunning, timerSecs,
     startScreenShare, saveBoard, canvasPages,
-    fmtTime
+    fmtTime,
+    isVideoOn, toggleVideo, hasVideoAccess,
+    hasActiveVideoStreams, showVideoChat, setShowVideoChat
 }) {
     return (
         <div style={{ height: 48, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", flexShrink: 0, background: WB_PANEL, borderTop: `1px solid ${BORDER}`, zIndex: 20 }}>
@@ -21,6 +23,18 @@ export default function BottomBar({
                 </button>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {hasActiveVideoStreams && (
+                    <button className="bot-btn" onClick={() => setShowVideoChat(s => !s)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${showVideoChat ? '#8B5CF6' : BORDER}`, background: showVideoChat ? '#EDE9FE' : "transparent", color: showVideoChat ? '#8B5CF6' : TSUB, cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all .15s" }}>
+                        {showVideoChat ? <Eye size={14} strokeWidth={2} /> : <EyeOff size={14} strokeWidth={2} />}
+                        {showVideoChat ? "Hide Videos" : "View Videos"}
+                    </button>
+                )}
+                {hasVideoAccess && (
+                    <button className="bot-btn" onClick={toggleVideo} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${isVideoOn ? '#8B5CF6' : BORDER}`, background: isVideoOn ? '#EDE9FE' : "transparent", color: isVideoOn ? '#8B5CF6' : TSUB, cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all .15s" }}>
+                        {isVideoOn ? <Video size={14} strokeWidth={2} /> : <VideoOff size={14} strokeWidth={2} />}
+                        {isVideoOn ? "Turn off Video" : "Turn on Video"}
+                    </button>
+                )}
                 <button className="bot-btn" onClick={startScreenShare} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: "transparent", color: TSUB, cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all .15s" }}>
                     <Monitor size={14} strokeWidth={2} /> Share Screen
                 </button>
