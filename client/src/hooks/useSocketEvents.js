@@ -7,7 +7,7 @@ export default function useSocketEvents({
     canvasRef,
     setShapes, setMessages,
     setTyping, typingTimer,
-    setOnlineUsers, stringToColor
+    setOnlineUsers, stringToColor, user, onLeave
 }) {
     useEffect(() => {
         const handleRemoteStroke = (payload) => {
@@ -54,17 +54,34 @@ export default function useSocketEvents({
             setShapes([]);
         };
 
+        const handleRemoteSyncState = (base64) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+        };
+
         const handleRemoteMessage = (msg) => {
             setMessages(prev => [...prev, {
                 id: msg._id || Date.now(),
                 type: msg.type,
                 user: msg.senderName,
+                senderId: msg.senderId,
                 color: stringToColor(msg.senderName),
                 text: msg.text,
                 fileName: msg.fileName,
                 fileUrl: msg.fileUrl,
                 time: formatTime(msg.createdAt || new Date()),
             }]);
+            
+            if (msg.type !== "system" && user && msg.senderId !== user._id) {
+                toast(`New message from ${msg.senderName}`, { icon: "💬", id: `msg-${msg._id}` });
+            }
         };
 
         const handleTyping = ({ name }) => {
@@ -79,6 +96,11 @@ export default function useSocketEvents({
         const handleUserLeft = ({ name }) => toast(`${name} left the board`, { icon: "👋" });
 
 
+        const handleRoomDeleted = () => {
+            toast.error("The host has deleted this room.", { duration: 4000 });
+            if (onLeave) onLeave();
+        };
+
         on("draw:stroke", handleRemoteStroke);
         on("draw:erase", handleRemoteErase);
         on("draw:text", handleRemoteText);
@@ -86,19 +108,21 @@ export default function useSocketEvents({
         on("draw:shape_update", handleRemoteShapeUpdate);
         on("draw:shape_delete", handleRemoteShapeDelete);
         on("draw:clear", handleRemoteClear);
+        on("draw:sync_state", handleRemoteSyncState);
         on("chat:message", handleRemoteMessage);
         on("chat:typing", handleTyping);
         on("chat:stop_typing", handleStopTyping);
         on("room:users", handleRoomUsers);
         on("room:user_joined", handleUserJoined);
         on("room:user_left", handleUserLeft);
+        on("room:deleted", handleRoomDeleted);
 
         return () => {
             off("draw:stroke"); off("draw:erase"); off("draw:text");
             off("draw:shape_add"); off("draw:shape_update"); off("draw:shape_delete");
-            off("draw:clear"); off("chat:message");
+            off("draw:clear"); off("draw:sync_state"); off("chat:message");
             off("chat:typing"); off("chat:stop_typing");
-            off("room:users"); off("room:user_joined"); off("room:user_left");
+            off("room:users"); off("room:user_joined"); off("room:user_left"); off("room:deleted");
         };
-    }, [roomId, on, off, canvasRef, setShapes, setMessages, setTyping, typingTimer, setOnlineUsers, stringToColor]);
+    }, [roomId, on, off, canvasRef, setShapes, setMessages, setTyping, typingTimer, setOnlineUsers, stringToColor, user, onLeave]);
 }

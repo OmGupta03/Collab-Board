@@ -2,7 +2,7 @@ import { Send, Upload } from 'lucide-react';
 import { TSUB, BORDER } from '../whiteboard/constants';
 import MessageItem from './MessageItem';
 
-export default function ChatPanel({ messages, typing, chatEndRef, chatInput, onTyping, onSend, onFileChange, uploading, fileInputRef }) {
+export default function ChatPanel({ messages, typing, chatEndRef, chatInput, onTyping, onSend, onFileChange, uploading, fileInputRef, user }) {
     return (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
@@ -11,7 +11,7 @@ export default function ChatPanel({ messages, typing, chatEndRef, chatInput, onT
                         No messages yet. Say hello! 👋
                     </div>
                 ) : (
-                    messages.map(msg => <MessageItem key={msg.id} msg={msg} isSystem={msg.type === "system"} />)
+                    messages.map(msg => <MessageItem key={msg.id} msg={msg} isSystem={msg.type === "system"} currentUser={user} />)
                 )}
                 {typing && (
                     <div style={{ fontSize: 13, color: "#8B5CF6", fontStyle: "italic", marginLeft: 4 }} className="pulsing slide-in">

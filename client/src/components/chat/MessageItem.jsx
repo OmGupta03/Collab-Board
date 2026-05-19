@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react';
 import { TSUB } from '../whiteboard/constants';
 
-export default function MessageItem({ msg, isSystem }) {
+export default function MessageItem({ msg, isSystem, currentUser }) {
     if (isSystem) {
         return (
             <div style={{ textAlign: "center", fontSize: 13, color: TSUB, margin: "16px 0", fontStyle: "italic", opacity: 0.8 }} className="slide-in">
@@ -10,11 +10,14 @@ export default function MessageItem({ msg, isSystem }) {
         );
     }
 
+    const isMe = currentUser && msg.senderId === currentUser._id;
+    const displayName = isMe ? "You" : msg.user;
+
     return (
         <div className="slide-in" style={{ marginBottom: 20 }}>
             {/* Name & Time */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6, paddingLeft: 2 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: msg.color }}>{msg.user}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: msg.color }}>{displayName}</span>
                 <span style={{ fontSize: 11, color: "rgba(0,0,0,0.35)", fontWeight: 500 }}>{msg.time}</span>
             </div>
 

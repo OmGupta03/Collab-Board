@@ -62,4 +62,13 @@ export const drawingEvents = (io, socket) => {
       await Room.updateOne({ roomId }, { $push: { history: { $each: [], $slice: -5 } } });
     } catch (err) {}
   });
+
+  // Sync state across all clients directly (used for undo/redo)
+  socket.on("draw:sync_state", async ({ roomId, base64 }) => {
+    socket.to(roomId).emit("draw:sync_state", base64);
+    try {
+      await Room.updateOne({ roomId }, { $push: { history: base64 } });
+      await Room.updateOne({ roomId }, { $push: { history: { $each: [], $slice: -5 } } });
+    } catch (err) {}
+  });
 };

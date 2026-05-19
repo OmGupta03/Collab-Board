@@ -4,7 +4,6 @@ import { WB_PANEL, BORDER, TSUB } from './constants';
 
 export default function TopBar({
     roomId, onLeave, onUndo, onRedo,
-    shapeSnap, onToggleSnap, snapStatus, snapError,
     onCopyRoomId, isHost
 }) {
     return (
@@ -30,14 +29,6 @@ export default function TopBar({
             )}
 
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                {isHost && (
-                    <button className={shapeSnap ? "snap-on" : ""} onClick={onToggleSnap}
-                        style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 16px", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: "#F8F5F0", color: TSUB, cursor: "pointer", fontSize: 13, fontWeight: 700, transition: "all .2s" }}>
-                        <Wand2 size={14} strokeWidth={2} />{shapeSnap ? "Shape Snap ON" : "Shape Snap"}
-                    </button>
-                )}
-                {isHost && snapStatus && <div className="pulsing" style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6", background: "#EDE9FE", padding: "4px 12px", borderRadius: 20, border: "1px solid rgba(139,92,246,.2)" }}>{snapStatus}</div>}
-                {isHost && snapError && <div style={{ fontSize: 12, fontWeight: 700, color: "#B91C1C", background: "#FEF2F2", padding: "4px 12px", borderRadius: 20, border: "1px solid #FECACA" }}>{snapError}</div>}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

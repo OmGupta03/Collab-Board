@@ -28,6 +28,7 @@ export default function useWhiteboardRoom({ roomId }) {
                 id: m._id,
                 type: m.type,
                 user: m.senderId?.name || "Unknown",
+                senderId: m.senderId?._id || m.senderId,
                 color: stringToColor(m.senderId?.name || ""),
                 text: m.text,
                 fileName: m.fileName,

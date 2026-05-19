@@ -1,10 +1,20 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { roomService } from "../services/roomService.js";
+import { useSocket } from "./useSocket.js";
 import toast from "react-hot-toast";
 
 export const useRoom = () => {
   const [rooms,   setRooms]   = useState([]);
   const [loading, setLoading] = useState(false);
+  const { on, off } = useSocket();
+
+  useEffect(() => {
+    const handleRoomDeletedGlobal = (roomId) => {
+      setRooms(prev => prev.filter(r => r.roomId !== roomId));
+    };
+    on("room:deleted_global", handleRoomDeletedGlobal);
+    return () => off("room:deleted_global", handleRoomDeletedGlobal);
+  }, [on, off]);
 
   const fetchRooms = useCallback(async () => {
     setLoading(true);

@@ -21,6 +21,7 @@ const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: process.env.CLIENT_URL, methods: ["GET", "POST"] },
 });
+app.set("io", io);
 
 // ── Middleware ──────────────────────────────────────────
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));

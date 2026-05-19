@@ -33,6 +33,7 @@ export default function Sidebar({
                     messages={messages} typing={typing} chatEndRef={chatEndRef}
                     chatInput={chatInput} onTyping={onTyping} onSend={onSend}
                     onFileChange={onFileChange} uploading={uploading} fileInputRef={fileInputRef}
+                    user={user}
                 />
             ) : (
                 <UsersList

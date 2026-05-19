@@ -82,48 +82,6 @@ const callAIWithRetry = async (base64, prompt, maxTokens = 300, retries = 1) => 
 };
 
 /**
- * ── Controller: Shape Snap ────────────────────────────────────
- * Detects and corrects shapes drawn on canvas.
- */
-export const runShapeSnap = asyncHandler(async (req, res) => {
-  const { base64 } = req.body;
-
-  // 1. Validation
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return sendResponse(res, 400, false, null, "AI service not configured on server.");
-  }
-  if (!base64) {
-    return sendResponse(res, 400, false, null, "Missing required image data (base64).");
-  }
-
-  console.log("[AI Info] Incoming Shape Snap request");
-
-  try {
-    // 2. Safe AI Call
-    const prompt = `Identify the primary shape. Reply ONLY with JSON: {"shape":"rectangle"|"circle"|"ellipse"|"triangle"|"line"|"none","confidence":0-1}.`;
-    const result = await callAIWithRetry(base64, prompt, 150);
-
-    console.log("[AI Raw Response]", result.raw);
-
-    // 3. Safe JSON Parsing
-    let parsed;
-    try {
-      const cleanJson = result.raw.trim().replace(/```json|```/g, "");
-      parsed = JSON.parse(cleanJson);
-    } catch (parseErr) {
-      console.warn("[AI Warning] Failed to parse JSON, returning raw text fallback");
-      parsed = { shape: "none", rawText: result.raw, confidence: 0 };
-    }
-
-    return sendResponse(res, 200, true, parsed, "Shape detection successful", null, { model: result.model });
-
-  } catch (err) {
-    console.error("[AI Fatal Error]", err.stack);
-    return sendResponse(res, 503, false, null, err.message || "AI service temporarily unavailable", err);
-  }
-});
-
-/**
  * ── Controller: Analyze Board ─────────────────────────────────
  * Generates summaries/suggestions based on board content.
  */

@@ -54,9 +54,6 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState("");
   const [showClear, setShowClear] = useState(false);
-  const [shapeSnap, setShapeSnap] = useState(false);
-  const [snapStatus, setSnapStatus] = useState("");
-  const [snapError, setSnapError] = useState("");
   const [showNotes, setShowNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [showTimer, setShowTimer] = useState(false);
@@ -74,8 +71,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
 
   const { canvasPages, canvasH, onScroll, onDown, onMove, onUp, onLeaveCanvas, undo, redo, clearBoard } = useCanvasDrawing({
     canvasRef, previewRef, scrollRef,
-    tool, color, brushSize, shapeSnap,
-    setSnapStatus, setSnapError,
+    tool, color, brushSize,
     shapes, setShapes,
     selectedId, setSelectedId,
     shapeDraft, setShapeDraft,
@@ -85,7 +81,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   });
 
   useSocketEvents({
-    roomId, on, off, canvasRef, setShapes, setMessages, setTyping, typingTimer, setOnlineUsers, stringToColor
+    roomId, on, off, canvasRef, setShapes, setMessages, setTyping, typingTimer, setOnlineUsers, stringToColor, user, onLeave
   });
 
   const { localStream, remoteStreams, isVideoOn, toggleVideo } = useVideoChat({
@@ -261,14 +257,12 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
         .pop-up{animation:popUp .22s cubic-bezier(.34,1.56,.64,1) forwards;}
         .slide-in{animation:slideIn .18s ease forwards;}
         .pulsing{animation:pulse 1.2s ease infinite;}
-        .snap-on{background:linear-gradient(135deg,#8B5CF6,#A78BFA) !important;color:#fff !important;border-color:transparent !important;box-shadow:0 3px 12px rgba(139,92,246,.35) !important;}
         .pdiv{border:none;border-top:2px dashed rgba(139,92,246,.2);width:100%;}
       `}</style>
 
       <TopBar
         roomId={roomId} onLeave={onLeave} onUndo={undo} onRedo={redo}
-        shapeSnap={shapeSnap} onToggleSnap={() => { setShapeSnap(s => !s); setSnapStatus(""); setSnapError(""); }}
-        snapStatus={snapStatus} snapError={snapError} onCopyRoomId={copyRoomId}
+        onCopyRoomId={copyRoomId}
         isHost={isHost}
       />
 
@@ -302,12 +296,6 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
               <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,.4)", padding: "2px 0", userSelect: "none" }}>Page {i + 2}</div>
             </div>
           ))}
-
-          {shapeSnap && !snapStatus && !snapError && (
-            <div style={{ position: "sticky", top: 16, left: "50%", transform: "translateX(-50%)", width: "fit-content", background: "linear-gradient(135deg,#EDE9FE,#F5F0FF)", border: "1px solid rgba(139,92,246,.25)", borderRadius: 20, padding: "5px 16px", fontSize: 12, fontWeight: 700, color: "#6D28D9", zIndex: 5, pointerEvents: "none", whiteSpace: "nowrap", display: "block", textAlign: "center" }}>
-              🪄 Shape Snap ON — draw any shape and AI will correct it
-            </div>
-          )}
 
           <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0, zIndex: 1, touchAction: "none" }} />
           <canvas ref={previewRef} style={{ position: "absolute", top: 0, left: 0, zIndex: 2, pointerEvents: "none" }} />

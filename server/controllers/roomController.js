@@ -67,12 +67,12 @@ const joinRoom = asyncHandler(async (req, res) => {
     // Check password if private
     if (room.settings.isPrivate) {
       if (!password) {
-        res.status(401);
+        res.status(403);
         throw new Error("Password required for private room");
       }
       const isMatch = await room.matchPassword(password);
       if (!isMatch) {
-        res.status(401);
+        res.status(403);
         throw new Error("Incorrect password");
       }
     }
@@ -102,7 +102,15 @@ const deleteRoom = asyncHandler(async (req, res) => {
     throw new Error("Only the host can delete this room");
   }
 
+  const roomId = room.roomId;
   await room.deleteOne();
+
+  // Notify connected clients that the room was deleted
+  const io = req.app.get("io");
+  if (io) {
+    io.to(roomId).emit("room:deleted"); // to kick out active participants
+    io.emit("room:deleted_global", roomId); // to update dashboards globally
+  }
 
   res.json({ message: "Room deleted" });
 });

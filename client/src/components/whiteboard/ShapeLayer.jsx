@@ -1,6 +1,11 @@
 import React from 'react';
 
 export function ShapeEl({ s, selected, onSelect, onDragStart, onResizeStart, onDelete }) {
+    const minX = Math.min(s.x, s.x + s.w);
+    const minY = Math.min(s.y, s.y + s.h);
+    const absW = Math.abs(s.w);
+    const absH = Math.abs(s.h);
+
     return (
         <g>
             <ShapeSVG s={s} selected={selected}
@@ -11,9 +16,9 @@ export function ShapeEl({ s, selected, onSelect, onDragStart, onResizeStart, onD
                     onDragStart((e.clientX - svgInfo.left) - s.x, (e.clientY - svgInfo.top) - s.y); 
                 }} />
             {selected && <>
-                <rect x={s.x - 6} y={s.y - 6} width={s.w + 12} height={s.h + 12} rx={6}
+                <rect x={minX - 6} y={minY - 6} width={absW + 12} height={absH + 12} rx={6}
                     fill="none" stroke="#8B5CF6" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} pointerEvents="none" />
-                <g transform={`translate(${s.x + s.w + 2},${s.y - 14})`} style={{ cursor: "pointer" }}
+                <g transform={`translate(${minX + absW + 2},${minY - 14})`} style={{ cursor: "pointer" }}
                     onMouseDown={e => { e.stopPropagation(); onDelete(); }}>
                     <circle r={8} fill="#EF4444" stroke="#fff" strokeWidth={1.5} />
                     <line x1={-4} y1={-4} x2={4} y2={4} stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
@@ -26,7 +31,7 @@ export function ShapeEl({ s, selected, onSelect, onDragStart, onResizeStart, onD
                         const svgInfo = e.currentTarget.closest('svg').getBoundingClientRect();
                         onResizeStart(e.clientX - svgInfo.left, e.clientY - svgInfo.top); 
                     }} />
-                <g transform={`translate(${s.x + s.w / 2},${s.y - 14})`} pointerEvents="none" opacity={0.7}>
+                <g transform={`translate(${minX + absW / 2},${minY - 14})`} pointerEvents="none" opacity={0.7}>
                     <circle r={8} fill="#8B5CF6" stroke="#fff" strokeWidth={1.5} />
                     <text textAnchor="middle" dominantBaseline="central" fontSize="9" fill="#fff" fontWeight="bold">✥</text>
                 </g>

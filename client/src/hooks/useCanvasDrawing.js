@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { aiService } from "../services/aiService";
 import { SHAPE_TOOLS, PAGE_H } from "../components/whiteboard/constants.jsx";
 import toast from "react-hot-toast";
 
 export default function useCanvasDrawing({
   canvasRef, previewRef, scrollRef,
-  tool, color, brushSize, shapeSnap,
-  setSnapStatus, setSnapError,
+  tool, color, brushSize,
   shapes, setShapes,
   setSelectedId,
   shapeDraft, setShapeDraft,
@@ -109,7 +107,11 @@ export default function useCanvasDrawing({
     redoRef.current.push(canvas.toDataURL());
     const img = new Image();
     img.src = historyRef.current.pop();
-    img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      emit("draw:sync_state", { roomId, base64: canvas.toDataURL() });
+    };
   };
 
   const redo = () => {
@@ -118,7 +120,11 @@ export default function useCanvasDrawing({
     historyRef.current.push(canvas.toDataURL());
     const img = new Image();
     img.src = redoRef.current.pop();
-    img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      emit("draw:sync_state", { roomId, base64: canvas.toDataURL() });
+    };
   };
 
   const clearBoard = () => {
@@ -128,53 +134,6 @@ export default function useCanvasDrawing({
     setShapes([]); setSelectedId(null);
     emit("draw:clear", { roomId });
     toast.success("Board cleared");
-  };
-
-  const runShapeSnap = async (b) => {
-    setSnapStatus("🔍 Detecting shape…"); setSnapError("");
-    try {
-      const pad = 24, canvas = canvasRef.current;
-      const cropX = Math.max(0, b.minX - pad);
-      const cropY = Math.max(0, b.minY - pad);
-      const cropW = Math.min(canvas.width - cropX, (b.maxX - b.minX) + pad * 2);
-      const cropH = Math.min(canvas.height - cropY, (b.maxY - b.minY) + pad * 2);
-      const off = document.createElement("canvas");
-      off.width = cropW; off.height = cropH;
-      const octx = off.getContext("2d");
-      octx.fillStyle = "#FFFFFF"; octx.fillRect(0, 0, cropW, cropH);
-      octx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-      const base64 = off.toDataURL("image/png").split(",")[1];
-
-      const data = await aiService.runShapeSnap(base64);
-
-      const { shape, confidence } = data;
-
-      if (!shape || shape === "none" || confidence < 0.45) {
-        setSnapStatus(""); setSnapError("⚠️ No obvious shape detected");
-        setTimeout(() => setSnapError(""), 3500);
-        return;
-      }
-
-      saveHistory();
-      const ctx = canvas.getContext("2d"), ep = brushSize + 8;
-      ctx.save(); ctx.globalCompositeOperation = "destination-out"; ctx.fillStyle = "rgba(0,0,0,1)";
-      ctx.fillRect(b.minX - ep, b.minY - ep, (b.maxX - b.minX) + ep * 2, (b.maxY - b.minY) + ep * 2);
-      ctx.restore();
-
-      let type = shape === "ellipse" ? "circle" : shape;
-      if (type === "rectangle") type = "rect";
-      const newShape = { id: String(Date.now()), type, x: b.minX, y: b.minY, w: b.maxX - b.minX, h: b.maxY - b.minY, color, strokeWidth: brushSize };
-      setShapes(prev => [...prev, newShape]);
-      emit("draw:shape_add", { roomId, shape: newShape });
-
-      setSnapStatus(`✨ Snapped to ${shape[0].toUpperCase() + shape.slice(1)}!`);
-      setTimeout(() => setSnapStatus(""), 3000);
-    } catch (err) {
-      console.error(err);
-      setSnapStatus(""); 
-      setSnapError(`⚠️ ${err.message || "Shape Snap failed"}`);
-      setTimeout(() => setSnapError(""), 3500);
-    }
   };
 
   const onDown = (e, hideMenus) => {
@@ -268,13 +227,23 @@ export default function useCanvasDrawing({
 
     } else if (shapeStart.current && SHAPE_TOOLS.includes(tool)) {
       const { x: sx, y: sy } = shapeStart.current;
-      setShapeDraft({ type: tool, x: Math.min(sx, pos.x), y: Math.min(sy, pos.y), w: Math.abs(pos.x - sx), h: Math.abs(pos.y - sy), color, strokeWidth: brushSize });
+      if (tool === "line") {
+        setShapeDraft({ type: tool, x: sx, y: sy, w: pos.x - sx, h: pos.y - sy, color, strokeWidth: brushSize });
+      } else {
+        setShapeDraft({ type: tool, x: Math.min(sx, pos.x), y: Math.min(sy, pos.y), w: Math.abs(pos.x - sx), h: Math.abs(pos.y - sy), color, strokeWidth: brushSize });
+      }
 
     } else if (dragInfo) {
       setShapes(prev => prev.map(s => s.id === dragInfo.id ? { ...s, x: pos.x - dragInfo.ox, y: pos.y - dragInfo.oy } : s));
     } else if (resizeInfo) {
       const dx = pos.x - resizeInfo.ox, dy = pos.y - resizeInfo.oy;
-      setShapes(prev => prev.map(s => s.id === resizeInfo.id ? { ...s, w: Math.max(20, resizeInfo.origW + dx), h: Math.max(20, resizeInfo.origH + dy) } : s));
+      setShapes(prev => prev.map(s => {
+        if (s.id !== resizeInfo.id) return s;
+        if (s.type === "line") {
+          return { ...s, w: resizeInfo.origW + dx, h: resizeInfo.origH + dy };
+        }
+        return { ...s, w: Math.max(20, resizeInfo.origW + dx), h: Math.max(20, resizeInfo.origH + dy) };
+      }));
     }
   };
 
@@ -287,13 +256,6 @@ export default function useCanvasDrawing({
     flushDrawBuffers();
     
     const pos = e ? getXY(e) : lastPos.current;
-
-    if (wasDrawing && tool === "pencil" && shapeSnap && pos) {
-      const b = strokeBounds.current;
-      if ((b.maxX - b.minX) > 30 && (b.maxY - b.minY) > 30) {
-        await runShapeSnap(b);
-      }
-    }
 
     if (hadShape && SHAPE_TOOLS.includes(tool) && pos) {
       const { x: sx, y: sy } = hadShape;
