@@ -36,6 +36,7 @@ export default function useCanvasDrawing({
   }, [emit, roomId]);
 
   const [canvasPages, setCanvasPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const canvasH = canvasPages * PAGE_H;
 
 
@@ -80,8 +81,14 @@ export default function useCanvasDrawing({
 
   const onScroll = () => {
     const el = scrollRef.current;
-    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
-      setCanvasPages(p => p + 1);
+    if (el) {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
+        setCanvasPages(p => p + 1);
+      }
+      setCurrentPage(prev => {
+        const newPage = Math.floor(el.scrollTop / PAGE_H) + 1;
+        return newPage !== prev ? newPage : prev;
+      });
     }
   };
 
@@ -314,7 +321,7 @@ export default function useCanvasDrawing({
   };
 
   return {
-    canvasPages, canvasH, onScroll,
+    canvasPages, currentPage, canvasH, onScroll,
     onDown, onMove, onUp, onLeaveCanvas,
     undo, redo, clearBoard, saveHistory
   };

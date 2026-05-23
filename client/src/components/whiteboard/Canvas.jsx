@@ -63,13 +63,13 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   /* ── Custom Hooks ───────────────────────────────────── */
   const { emit, on, off } = useSocket();
 
-  const { timerSecs, timerRunning, timerInput, setTimerInput, setTimerRunning, startTimer, resetTimer } = useTimer();
+  const { timerSecs, timerRunning, timerInput, setTimerInput, pauseTimer, startTimer, resetTimer } = useTimer({ roomId, emit, on, off });
 
-  const { roomInfo, messages, setMessages, onlineUsers, setOnlineUsers, typing, setTyping, typingTimer, stringToColor } = useWhiteboardRoom({ roomId });
+  const { roomInfo, messages, setMessages, onlineUsers, setOnlineUsers, typing, setTyping, typingTimer, stringToColor } = useWhiteboardRoom({ roomId, onLeave });
 
   const { shapes, setShapes, selectedId, setSelectedId, dragInfo, setDragInfo, resizeInfo, setResizeInfo, shapeDraft, setShapeDraft, deleteShapeLocally } = useShapes();
 
-  const { canvasPages, canvasH, onScroll, onDown, onMove, onUp, onLeaveCanvas, undo, redo, clearBoard } = useCanvasDrawing({
+  const { canvasPages, currentPage, canvasH, onScroll, onDown, onMove, onUp, onLeaveCanvas, undo, redo, clearBoard } = useCanvasDrawing({
     canvasRef, previewRef, scrollRef,
     tool, color, brushSize,
     shapes, setShapes,
@@ -164,17 +164,6 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
     toast.success("Room ID copied!");
   };
 
-  const startScreenShare = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.play();
-      toast.success("Screen sharing started");
-    } catch {
-      toast.error("Screen share failed");
-    }
-  };
 
   const sendMsg = () => {
     if (!chatInput.trim()) return;
@@ -333,7 +322,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
       <BottomBar
         showNotes={showNotes} setShowNotes={setShowNotes}
         showTimer={showTimer} setShowTimer={setShowTimer} timerRunning={timerRunning} timerSecs={timerSecs}
-        startScreenShare={startScreenShare} saveBoard={saveBoard} canvasPages={canvasPages}
+        saveBoard={saveBoard} canvasPages={canvasPages} currentPage={currentPage}
         fmtTime={fmtTime}
         isVideoOn={isVideoOn} toggleVideo={toggleVideo} hasVideoAccess={finalHasVideoAccess}
         hasActiveVideoStreams={hasActiveVideoStreams} showVideoChat={showVideoChat} setShowVideoChat={setShowVideoChat}
@@ -341,7 +330,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
 
       {showAI && <AIPanel sidebarOpen={sidebarOpen} onClose={() => setShowAI(false)} onAction={runAI} loading={aiLoading} result={aiResult} />}
       {showNotes && <NotesPanel onClose={() => setShowNotes(false)} notesText={notesText} onChange={setNotesText} />}
-      {showTimer && <TimerPanel onClose={() => setShowTimer(false)} timerSecs={timerSecs} timerRunning={timerRunning} timerInput={timerInput} onInputChange={setTimerInput} onStart={startTimer} onPause={() => setTimerRunning(false)} onReset={resetTimer} showNotes={showNotes} />}
+      {showTimer && <TimerPanel onClose={() => setShowTimer(false)} timerSecs={timerSecs} timerRunning={timerRunning} timerInput={timerInput} onInputChange={setTimerInput} onStart={startTimer} onPause={pauseTimer} onReset={resetTimer} showNotes={showNotes} isHost={isHost} />}
       {showClear && <ClearModal onCancel={() => setShowClear(false)} onConfirm={handleClearConfirm} />}
     </div>
   );

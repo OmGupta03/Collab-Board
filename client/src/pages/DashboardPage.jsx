@@ -78,6 +78,14 @@ export default function DashboardPage() {
     );
   }, []);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    if (hour < 21) return "Good evening";
+    return "Good night";
+  };
+
   return (
     <div style={{ 
       minHeight: "100vh", 
@@ -112,7 +120,7 @@ export default function DashboardPage() {
         {/* Greeting */}
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'Nunito',sans-serif", fontWeight: 900, fontSize: 32, color: "#2D1B69", letterSpacing: "-0.5px", marginBottom: 4 }}>
-            Good morning, {user?.name?.split(" ")[0]} 👋
+            {getGreeting()}, {user?.name?.split(" ")[0]} 👋
           </h1>
           <p style={{ fontFamily: "'Caveat',cursive", fontSize: 18, color: "#7C6B3A", fontWeight: 600 }}>
             {rooms.length > 0 ? `You have ${rooms.filter(r=>r.isActive).length} active boards — let's build something great!` : "Create your first board and start collaborating!"}

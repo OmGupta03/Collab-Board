@@ -5,7 +5,7 @@ import { WB_PANEL, BORDER, TSUB } from './constants';
 export default function BottomBar({
     showNotes, setShowNotes,
     showTimer, setShowTimer, timerRunning, timerSecs,
-    startScreenShare, saveBoard, canvasPages,
+    saveBoard, canvasPages, currentPage,
     fmtTime,
     isVideoOn, toggleVideo, hasVideoAccess,
     hasActiveVideoStreams, showVideoChat, setShowVideoChat
@@ -35,9 +35,7 @@ export default function BottomBar({
                         {isVideoOn ? "Turn off Video" : "Turn on Video"}
                     </button>
                 )}
-                <button className="bot-btn" onClick={startScreenShare} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${BORDER}`, background: "transparent", color: TSUB, cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all .15s" }}>
-                    <Monitor size={14} strokeWidth={2} /> Share Screen
-                </button>
+
                 <button onClick={saveBoard}
                     style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#8B5CF6,#A78BFA)", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, boxShadow: "0 2px 10px rgba(139,92,246,.25)", transition: "box-shadow .2s" }}
                     onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 18px rgba(139,92,246,.4)"}
@@ -46,8 +44,8 @@ export default function BottomBar({
                 </button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, color: TSUB }}>
-                <span>Pages</span>
-                <span style={{ background: "#F0EBFF", color: "#8B5CF6", padding: "2px 9px", borderRadius: 6, fontWeight: 800, fontSize: 11 }}>{canvasPages}</span>
+                <span>Page</span>
+                <span style={{ background: "#F0EBFF", color: "#8B5CF6", padding: "2px 9px", borderRadius: 6, fontWeight: 800, fontSize: 11 }}>{currentPage} / {canvasPages}</span>
             </div>
         </div>
     );

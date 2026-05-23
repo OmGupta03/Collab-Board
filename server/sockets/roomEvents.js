@@ -30,4 +30,9 @@ export const roomEvents = (io, socket, roomUsers) => {
     socket.to(roomId).emit("room:user_left", { userId, name });
     console.log(`👋 ${name} left room ${roomId}`);
   });
+
+  // Timer synchronization
+  socket.on("room:timer_sync", ({ roomId, secs, running }) => {
+    socket.to(roomId).emit("room:timer_sync", { secs, running });
+  });
 };

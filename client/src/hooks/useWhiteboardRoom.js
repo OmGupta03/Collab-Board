@@ -10,7 +10,7 @@ export const stringToColor = (str) => {
     return colors[Math.abs(hash) % colors.length];
 };
 
-export default function useWhiteboardRoom({ roomId }) {
+export default function useWhiteboardRoom({ roomId, onLeave }) {
     const [roomInfo, setRoomInfo] = useState(null);
     const [messages, setMessages] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
@@ -37,9 +37,10 @@ export default function useWhiteboardRoom({ roomId }) {
             }));
             setMessages(formatted);
         } catch {
-            toast.error("Could not load room data");
+            toast.error("Room no longer exists or could not be loaded");
+            if (onLeave) onLeave();
         }
-    }, [roomId]);
+    }, [roomId, onLeave]);
 
     useEffect(() => {
         // Move to next tick to avoid synchronous setState inside render-driven effects
