@@ -40,7 +40,7 @@ export default function useTimer({ roomId, emit, on, off }) {
             off("room:timer_sync", handleTimerSync);
             off("room:user_joined", handleUserJoined);
         };
-    }, [on, off]);
+    }, [on, off, broadcastTimer]);
 
     // Local interval when running
     useEffect(() => {

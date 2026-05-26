@@ -85,6 +85,7 @@ export default function MaterialsPage() {
       setMaterials(matsData);
       setRooms(roomsData);
     } catch (error) {
+      console.error("Failed to load materials:", error);
       toast.error("Failed to load materials");
     } finally {
       setLoading(false);
@@ -103,6 +104,7 @@ export default function MaterialsPage() {
       setShowUpload(false);
       fetchMaterialsAndRooms();
     } catch (err) {
+      console.error("Upload failed:", err);
       toast.error("Upload failed");
     } finally {
       setUploading(false);
@@ -117,7 +119,7 @@ export default function MaterialsPage() {
     return acc;
   }, {});
 
-  const handleDownload = (fileUrl, fileName) => {
+  const handleDownload = (fileUrl) => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
     const baseUrl = apiUrl.replace("/api", "");
     
@@ -138,6 +140,7 @@ export default function MaterialsPage() {
       toast.success("Deleted successfully");
       fetchMaterialsAndRooms();
     } catch (err) {
+      console.error("Failed to delete material:", err);
       toast.error("Failed to delete");
     }
   };
@@ -161,7 +164,7 @@ export default function MaterialsPage() {
                 {file.tag}
               </span>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => handleDownload(file.fileUrl, file.fileName)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6B7280" }} title="Download">
+                <button onClick={() => handleDownload(file.fileUrl)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6B7280" }} title="Download">
                   <Download size={18} />
                 </button>
                 <button onClick={() => handleDelete(file._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }} title="Delete">
