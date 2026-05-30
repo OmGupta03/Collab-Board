@@ -1,56 +1,77 @@
-# CollabBoard – Real-time Collaborative Whiteboard (Microservices Architecture)
+# CollabBoard – Real-time Collaborative Whiteboard
 
-CollabBoard is a high-performance, real-time collaborative whiteboard application designed using a scalable microservices architecture. It allows multiple users to draw, communicate, and share ideas simultaneously. The platform enables users to create or join rooms, collaborate on a shared canvas, chat in real time, and manage participants seamlessly. 
-
-The backend is built as a distributed microservices system utilizing **Java (Spring Boot)** and **Golang** to handle high concurrency, data persistence via **PostgreSQL** and **MariaDB**, and real-time event synchronization using **WebSockets** and **Redis Pub/Sub**.
+CollabBoard is a full-stack real-time collaborative whiteboard application that allows multiple users to draw, communicate, and share ideas simultaneously. The platform enables users to create or join rooms, collaborate on a shared canvas, chat in real time, and manage participants seamlessly. It is designed to provide an interactive environment similar to modern collaborative tools like Miro or Excalidraw.
 
 ---
 
 ## 🚀 Features
 
-### 🔐 Authentication & User Microservice (Java / Spring Boot)
-* Secure user authentication and token handling using **JWT (JSON Web Tokens)**
-* Federated login with **Google OAuth2** integrated via Spring Security
-* Object-Oriented programming (OOP) principles for user profile management, session tracking, and access roles (Host vs. Member)
-* Persistent storage of user profiles and credential audits in **PostgreSQL**
+### 🔐 Authentication
 
-### 🎨 Realtime Whiteboard & Collaboration Microservice (Golang)
-* Pencil drawing, eraser, and geometric shape tools (Rectangle, Circle, Triangle, Line)
-* Multi-user drawing synchronization powered by a high-throughput **Golang WebSocket Server**
-* Concurrency model leveraging Go's **Goroutines and Channels** to handle thousands of concurrent WebSocket connections efficiently
-* **Redis Pub/Sub** for broadcasting draw events across multiple horizontal microservice instances
-* State management for Undo/Redo operations and canvas clear requests
-* Export whiteboard states as PNG
+* Secure user authentication using **JWT**
+* **Google OAuth login** using Passport.js
+* User profile with name, email, and avatar
 
-### 💬 Communication & Chat Microservice (Golang)
-* Real-time room chat system with typing indicators and file sharing
-* High-performance relational schema in **MariaDB** for chat logs and room history retrieval
-* Asynchronous message storage using execution pools to ensure low-latency message delivery
+### 🎨 Realtime Whiteboard
 
-### 🤖 Smart Board Analytics Microservice (Java / Spring Boot)
-* AI-powered board analysis converting canvas structures into structured descriptors using Claude API
-* Shape-snap feature transforming rough sketch points into clean geometric shapes
-* Sticky notes and active session timer features
+* Pencil drawing tool
+* Eraser tool
+* Shape tools (Rectangle, Circle, Triangle, Line)
+* Undo / Redo functionality
+* Clear board
+* Export whiteboard as PNG
+* Color palette and brush size selection
+
+### 👥 Realtime Collaboration
+
+* Multi-user drawing with **Socket.io**
+* Live synchronization of drawings and shapes
+* Online participants list
+* Host and member roles
+* Room creation and joining via Room ID
+
+### 💬 Communication
+
+* Realtime chat system
+* Typing indicators
+* File sharing in chat
+* Chat history stored in database
+
+### 🤖 Smart Tools
+
+* AI-powered board analysis
+* Shape-snap feature to convert rough drawings into shapes
+* Sticky notes panel
+* Session timer
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🛠️ Tech Stack
 
 ### Frontend
-* React.js (Vite) / Canvas API / Context API
+
+* React.js (Vite)
+* Context API
 * Socket.io Client
+* Canvas API
 * Lucide Icons
 
-### Backend (Microservices)
-* **Java (Spring Boot / Spring Security):** Auth Service, Profile Service, and AI Integration.
-* **Golang:** Real-time Collaboration Engine, WebSocket Handlers, and Chat Service.
-* **Databases:**
-  * **PostgreSQL:** Handles relational transactional data (Users, Rooms, Canvas States).
-  * **MariaDB:** Handles chat logs, audit tracking, and message history.
-  * **Redis:** In-memory store for active session states and Pub/Sub event distribution.
-* **Network & Protocols:** WebSockets (over TCP), HTTP/2, REST APIs, CORS.
-* **Security & Practices:** SSL/TLS termination, SQL Injection protection via parameterized queries/ORM, JWT validation middleware, and secure password hashing (BCrypt).
-* **Deployment & DevOps:** Docker containerization, Docker Compose for local orchestration, Kubernetes deployment configurations.
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB with Mongoose
+* Socket.io
+
+### Authentication
+
+* JWT Authentication
+* Google OAuth (Passport.js)
+
+### Additional Services
+
+* Cloudinary (file uploads)
+* Claude API (AI analysis)
 
 ---
 
@@ -59,72 +80,104 @@ The backend is built as a distributed microservices system utilizing **Java (Spr
 ```
 CollabBoard
 │
-├── client                         # React Frontend
-│   ├── src
-│   │   ├── components             # Reusable UI elements
-│   │   ├── pages                  # React Pages (Board, Lounge, Login)
-│   │   └── context                # Client-side state management
-│   
-├── services
-│   ├── auth-service (Java)        # Spring Boot Auth/User management
-│   ├── collab-service (Golang)    # WebSocket sync & collaboration engine
-│   ├── chat-service (Golang)      # Message storage and chat engine
-│   └── ai-service (Java)          # AI board analyzer integrations
+├── client          # React frontend
+│   ├── components
+│   ├── pages
+│   ├── context
+│   ├── services
+│   └── utils
 │
-└── docker-compose.yml             # Orchestration for local development
+├── server          # Express backend
+│   ├── controllers
+│   ├── routes
+│   ├── models
+│   ├── middleware
+│   └── sockets
+│
+└── README.md
 ```
 
 ---
 
-## ⚙️ Installation & Running Locally
+## ⚙️ Installation
 
-### 1. Prerequisites
-Ensure you have the following installed:
-* Java Development Kit (JDK 17 or higher)
-* Go (1.20 or higher)
-* Docker & Docker Compose
-* Node.js & npm (for the React client)
+### 1. Clone the Repository
 
-### 2. Set Up Environment Variables
-Create a `.env` file in the root directory:
-```env
-# Database Credentials
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_postgres_password
-POSTGRES_DB=collabboard_db
+```bash
+git clone https://github.com/OmGupta03/Collab-Board
+cd collabboard
+```
 
-MARIADB_ROOT_PASSWORD=your_mariadb_password
-MARIADB_DATABASE=collabboard_chat
+### 2. Install Dependencies
 
-# Security Configs
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRE=86400
+Frontend
 
-# Google OAuth Configs
+```bash
+cd client
+npm install
+```
+
+Backend
+
+```bash
+cd server
+npm install
+```
+
+### 3. Environment Variables
+
+Create a `.env` file in the backend folder.
+
+Example:
+
+```
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/CollabBoard
+JWT_SECRET=your_secret_key
+JWT_EXPIRE=7d
+
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:8080/api/auth/google/callback
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
 CLIENT_URL=http://localhost:5173
 ```
 
-### 3. Run with Docker Compose
-Orchestrate all services (Java Auth, Golang Collab, Chat, Postgres, MariaDB, and Redis) locally:
+---
+
+### 4. Run the Application
+
+Backend
+
 ```bash
-docker-compose up --build
+npm run dev
 ```
 
-### 4. Run the Frontend Client
-Navigate to the client directory and run the development server:
+Frontend
+
 ```bash
-cd client
-npm install
 npm run dev
 ```
 
 ---
 
-## 📌 Future Scaling & Architecture Goals
-* Kubernetes implementation with horizontal pod autoscalers based on WebSocket CPU utilization
-* Database sharding for PostgreSQL as canvas drawings scale
-* Redis cluster integration for distributed caching of room canvas paths
+## 📌 Future Improvements
+
+* Screen sharing functionality
+* Text tool improvements
+* Advanced shape editing
+* Infinite canvas
+* Role-based permissions
+* Performance optimization for large boards
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome. Feel free to fork the repository and submit a pull request.
+
+---
+
+## 📄 License
+
+This project is open source and available under the MIT License.
