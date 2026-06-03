@@ -1,8 +1,7 @@
 import asyncHandler from "express-async-handler";
 
 /**
- * ── Generic Response Wrapper ─────────────────────────────────
- * Ensures all AI responses follow a consistent format.
+ * Ensuring all AI responses follow a consistent format.
  */
 const sendResponse = (res, statusCode, success, data, message, error = null, meta = {}) => {
   const response = {
@@ -24,95 +23,120 @@ const sendResponse = (res, statusCode, success, data, message, error = null, met
 };
 
 /**
- * ── AI Call Utility with Timeout & Retry ──────────────────────
+ * Call Google Gemini API Directly (Vision & Multimodal content generation)
  */
-const callAIWithRetry = async (base64, prompt, maxTokens = 300, retries = 1) => {
-  const timeoutMs = 8000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+const callGemini = async (base64, prompt) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    throw new Error("Gemini API key is not configured on server.");
+  }
 
-  const fetchTask = fetch("https://api.anthropic.com/v1/messages", {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
     method: "POST",
-    signal: controller.signal,
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-3-5-sonnet-20240620",
-      max_tokens: maxTokens,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: "image/png", data: base64 } },
-          { type: "text", text: prompt },
-        ],
-      }],
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: "image/png",
+                data: base64,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
     }),
   });
 
-  try {
-    const response = await fetchTask;
-    clearTimeout(timeoutId);
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error?.message || `AI service error: ${response.status}`);
-    }
-
-    if (!data?.content?.[0]?.text) {
-      throw new Error("Empty response from AI service");
-    }
-
-    return { raw: data.content[0].text, model: data.model };
-  } catch (err) {
-    clearTimeout(timeoutId);
-
-    const isTimeout = err.name === "AbortError";
-    const errorMessage = isTimeout ? "AI request timed out (8s)" : err.message;
-
-    console.error(`[AI Error] ${errorMessage}`, { retriesLeft: retries });
-
-    if (retries > 0) {
-      return callAIWithRetry(base64, prompt, maxTokens, retries - 1);
-    }
-    throw new Error(isTimeout ? "AI service temporarily unavailable (timeout)" : errorMessage);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `Gemini API error: ${response.status}`);
   }
+
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error("Empty response from Gemini API");
+  }
+
+  return { raw: text, model: "gemini-2.5-flash" };
 };
 
 /**
- * ── Controller: Analyze Board ─────────────────────────────────
- * Generates summaries/suggestions based on board content.
+ * Controller: Analyze Board (Smart Diagram Beautifier)
+ * Uses Google Gemini 2.5 Flash to convert hand-drawn whiteboard sketches to structured shape JSON.
  */
 export const analyzeBoard = asyncHandler(async (req, res) => {
   const { base64, action } = req.body;
 
   // 1. Validation
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return sendResponse(res, 400, false, null, "AI service not configured on server.");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    return sendResponse(res, 400, false, null, "Gemini API key is not configured on server.");
   }
   if (!base64 || !action) {
     return sendResponse(res, 400, false, null, "Missing required fields: base64 or action.");
   }
 
-  console.log(`[AI Info] Incoming Board Analysis: ${action}`);
+  console.log(`[AI Info] Incoming Board Analysis: ${action} via Gemini API`);
 
-  const prompts = {
-    "Summarise": "Describe what is drawn on this whiteboard in 2-3 brief bullet points. Start each with an emoji.",
-    "Suggest Ideas": "Based on the content drawn, suggest 3 ideas to extend this diagram. Be concise.",
-    "Auto Layout": "Describe a cleaner layout for these shapes and content. Be concise.",
-    "Fix Text": "If there is any text visible, suggest corrections. Otherwise say 'No text found.'",
-  };
+  const prompt = `You are a system that converts hand-drawn sketch diagrams on a whiteboard into clean, structured vector diagrams.
+Analyze the provided image of the whiteboard canvas. Identify all rough hand-drawn shapes (such as rectangles, circles, triangles, lines, arrows) and hand-written texts.
+Convert these sketches into clean shapes using the following definitions:
+- "rect" (rectangle): { "type": "rect", "x": number, "y": number, "w": number, "h": number, "color": string, "strokeWidth": number }
+- "circle" (circle/ellipse): { "type": "circle", "x": number, "y": number, "w": number, "h": number, "color": string, "strokeWidth": number }
+- "triangle" (triangle): { "type": "triangle", "x": number, "y": number, "w": number, "h": number, "color": string, "strokeWidth": number }
+- "line" (line or arrow): { "type": "line", "x": number, "y": number, "w": number, "h": number, "color": string, "strokeWidth": number } (Note: for lines, w is the relative horizontal displacement dx, h is the relative vertical displacement dy)
+- "text" (text label): { "type": "text", "x": number, "y": number, "w": number, "h": number, "color": string, "text": string, "strokeWidth": number }
+
+Rules:
+1. POSITION AND SIZE ARE CRITICAL: You must detect and output each shape at the EXACT SAME POSITION (x, y coordinates) and the EXACT SAME SIZE (width w, height h) as drawn by the user in the image. Do not change their locations, center them, or scale them. The clean shapes should perfectly match and overlap where the rough drawings were.
+2. If text is written inside a shape, output the container shape at its exact location, and then place a corresponding "text" shape centered inside it.
+3. Choose outline stroke colors from this set: '#1E1A14', '#EF4444', '#F97316', '#22C55E', '#3B82F6', '#8B5CF6'. Default outline/text color should be '#1E1A14'.
+4. Maintain the logical flow of connections (arrows/lines) between the shapes, placing them at their exact drawn positions.
+5. Output your response STRICTLY as a JSON object, without markdown formatting blocks, in this format:
+{ "shapes": [ ... ] }`;
 
   try {
-    const prompt = prompts[action] || prompts["Summarise"];
-    const result = await callAIWithRetry(base64, prompt, 300);
+    const result = await callGemini(base64, prompt);
+    
+    // Clean up response if the model returned markdown code block wrappers
+    let rawText = result.raw.trim();
+    if (rawText.startsWith("```json")) {
+      rawText = rawText.substring(7);
+    } else if (rawText.startsWith("```")) {
+      rawText = rawText.substring(3);
+    }
+    if (rawText.endsWith("```")) {
+      rawText = rawText.substring(0, rawText.length - 3);
+    }
+    rawText = rawText.trim();
 
-    return sendResponse(res, 200, true, result.raw, "Analysis successful", null, { model: result.model });
+    let parsedData;
+    try {
+      parsedData = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.error("[AI Parse Error] Failed to parse JSON response:", rawText);
+      return sendResponse(res, 502, false, null, "AI service returned invalid JSON response format", parseErr.message);
+    }
+
+    if (!parsedData || !Array.isArray(parsedData.shapes)) {
+      return sendResponse(res, 502, false, null, "AI response missing expected 'shapes' array");
+    }
+
+    return sendResponse(res, 200, true, parsedData, "Beautification successful", null, { model: result.model });
 
   } catch (err) {
     console.error("[AI Fatal Error]", err.stack);
-    return sendResponse(res, 503, false, "Fallback: AI failed to analyze this board.", err.message, err);
+    return sendResponse(res, 500, false, null, err.message, err);
   }
 });

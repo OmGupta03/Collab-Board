@@ -4,11 +4,11 @@ import { WB_TOOLS, PALETTE_COLORS, TSUB, BORDER } from './constants';
 
 const Divider = () => <div style={{ width: 26, height: 1, background: BORDER, margin: "4px 0" }} />;
 
-const ToolBtn = ({ id, icon, label, onClick, forceActive, tool, setTool, setShowAI, setShowPalette, setShowBrush }) => {
+const ToolBtn = ({ id, icon, label, onClick, forceActive, tool, setTool, setShowPalette, setShowBrush }) => {
   const active = forceActive !== undefined ? forceActive : tool === id;
   return (
     <button title={label}
-      onClick={onClick || (() => { setTool(id); if (id === "ai") setShowAI(true); setShowPalette(false); setShowBrush(false); })}
+      onClick={onClick || (() => { setTool(id); setShowPalette(false); setShowBrush(false); })}
       style={{ width: 40, height: 40, borderRadius: 10, border: active ? "1.5px solid #8B5CF6" : "1.5px solid transparent", background: active ? "#EDE9FE" : "transparent", color: active ? "#8B5CF6" : TSUB, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}
       onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "#F5F2FF"; e.currentTarget.style.color = "#8B5CF6"; } }}
       onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TSUB; } }}>
@@ -20,15 +20,24 @@ const ToolBtn = ({ id, icon, label, onClick, forceActive, tool, setTool, setShow
 export default function Toolbar({
   tool, setTool, color, setColor, brushSize, setBrushSize,
   showPalette, setShowPalette, showBrush, setShowBrush,
-  showAI, setShowAI, onUndo, onRedo, onClearClick
+  aiLoading, onAIClick, onUndo, onRedo, onClearClick
 }) {
 
   return (
     <div style={{ position: "fixed", left: 12, top: 70, bottom: 70, zIndex: 20, background: "#FFF", border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,.08)", padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, justifyContent: "center" }}>
-      {WB_TOOLS.map(t => <ToolBtn key={t.id} {...t} tool={tool} setTool={setTool} setShowAI={setShowAI} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />)}
+      {WB_TOOLS.map(t => <ToolBtn key={t.id} {...t} tool={tool} setTool={setTool} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />)}
       <Divider />
-      <ToolBtn id="ai" icon={<Sparkles size={17} strokeWidth={2} />} label="AI Assistant"
-        onClick={() => { setShowAI(true); setShowPalette(false); setShowBrush(false); }} forceActive={showAI} tool={tool} setTool={setTool} setShowAI={setShowAI} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />
+      <ToolBtn 
+        id="ai" 
+        icon={<Sparkles size={17} strokeWidth={2} className={aiLoading ? "pulsing" : ""} />} 
+        label={aiLoading ? "Beautifying..." : "Beautify Diagram (AI)"}
+        onClick={aiLoading ? null : () => { onAIClick(); setShowPalette(false); setShowBrush(false); }} 
+        forceActive={aiLoading} 
+        tool={tool} 
+        setTool={setTool} 
+        setShowPalette={setShowPalette} 
+        setShowBrush={setShowBrush} 
+      />
       <Divider />
 
       <div style={{ position: "relative" }}>
@@ -73,8 +82,8 @@ export default function Toolbar({
       </div>
 
       <Divider />
-      <ToolBtn id="ux" icon={<Undo2 size={17} strokeWidth={2} />} label="Undo" onClick={onUndo} forceActive={false} tool={tool} setTool={setTool} setShowAI={setShowAI} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />
-      <ToolBtn id="rx" icon={<Redo2 size={17} strokeWidth={2} />} label="Redo" onClick={onRedo} forceActive={false} tool={tool} setTool={setTool} setShowAI={setShowAI} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />
+      <ToolBtn id="ux" icon={<Undo2 size={17} strokeWidth={2} />} label="Undo" onClick={onUndo} forceActive={false} tool={tool} setTool={setTool} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />
+      <ToolBtn id="rx" icon={<Redo2 size={17} strokeWidth={2} />} label="Redo" onClick={onRedo} forceActive={false} tool={tool} setTool={setTool} setShowPalette={setShowPalette} setShowBrush={setShowBrush} />
       <Divider />
       <button title="Clear Board" onClick={onClearClick}
         style={{ width: 40, height: 40, borderRadius: 10, border: "1.5px solid transparent", background: "transparent", color: "#EF4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}

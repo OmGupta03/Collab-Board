@@ -8,7 +8,6 @@ import Toolbar from './Toolbar';
 import Sidebar from '../sidebar/Sidebar';
 import BottomBar from './BottomBar';
 import ShapeLayer from './ShapeLayer';
-import AIPanel from './AIPanel';
 import NotesPanel from './NotesPanel';
 import TimerPanel from './TimerPanel';
 import ClearModal from './ClearModal';
@@ -50,9 +49,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   const [uploading, setUploading] = useState(false);
 
   /* ── AI & UI state ────────────────────────────────────── */
-  const [showAI, setShowAI] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiResult, setAiResult] = useState("");
   const [showClear, setShowClear] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
@@ -196,23 +193,54 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
   };
 
   const runAI = async (action) => {
-    setAiLoading(true); setAiResult("");
+    if (aiLoading) return;
+    setAiLoading(true);
+    const toastId = toast.loading("Analyzing and beautifying your diagram...");
     try {
       const base64 = exportBoardAsPNG(canvasRef.current, shapes).split(",")[1];
-
-      if (!import.meta.env.VITE_ANTHROPIC_API_KEY) {
-        console.warn("No Anthropic API Key - using Mock AI Response");
-        await new Promise(r => setTimeout(r, 1200));
-        setAiResult("This is a mocked AI response because the VITE_ANTHROPIC_API_KEY is missing in your .env file.\n\n- It looks like a great whiteboard session! 🎨\n- I can see your shapes and lines.\n- To experience the real AI features, add your Anthropic API key to the client/.env file.");
-        setAiLoading(false);
-        return;
-      }
-
       const data = await aiService.analyzeBoard(base64, action);
-      setAiResult(data.result);
+
+      if (data && data.success && Array.isArray(data.data?.shapes)) {
+        const shapesList = data.data.shapes.map((s, index) => ({
+          ...s,
+          id: String(Date.now() + index + Math.random()),
+          color: s.color || color,
+          strokeWidth: s.strokeWidth || brushSize || 2
+        }));
+
+        // 1. Clear messy raw hand-drawn pixels from the local canvas
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (canvas && ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // Sync canvas erase/clear to all other participants
+          emit("draw:sync_state", { roomId, base64: canvas.toDataURL() });
+        }
+
+        // 2. Add vectorized shapes to local state
+        setShapes(prev => [...prev, ...shapesList]);
+
+        // 3. Emit draw:shape_add for each shape to sync it with others and save to MongoDB
+        shapesList.forEach(shape => {
+          emit("draw:shape_add", { roomId, shape });
+        });
+
+        // 4. Save the new combined state to drawing history
+        setTimeout(() => {
+          if (canvasRef.current) {
+            emit("draw:save_history", { roomId, base64: exportBoardAsPNG(canvasRef.current, [...shapes, ...shapesList]) });
+          }
+        }, 100);
+
+        toast.success(`Success! Converted ${shapesList.length} shape(s).`, { id: toastId });
+      } else {
+        const errDetail = data?.message || "No shapes identified.";
+        toast.error(`AI Error: ${errDetail}`, { id: toastId });
+      }
     } catch (err) {
       console.error(err);
-      setAiResult(`⚠️ ${err.message || "Failed to connect. Please try again."}`);
+      const errMsg = err.response?.data?.message || err.message || "Failed to connect to AI server.";
+      toast.error(`⚠️ ${errMsg}`, { id: toastId });
     }
     setAiLoading(false);
   };
@@ -265,7 +293,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
             brushSize={brushSize} setBrushSize={setBrushSize}
             showPalette={showPalette} setShowPalette={setShowPalette}
             showBrush={showBrush} setShowBrush={setShowBrush}
-            showAI={showAI} setShowAI={setShowAI}
+            aiLoading={aiLoading} onAIClick={() => runAI("Beautify Board")}
             onUndo={undo} onRedo={redo} onClearClick={() => setShowClear(true)}
           />
         )}
@@ -328,7 +356,7 @@ export default function WhiteboardRoom({ roomId, user, onLeave }) {
         hasActiveVideoStreams={hasActiveVideoStreams} showVideoChat={showVideoChat} setShowVideoChat={setShowVideoChat}
       />
 
-      {showAI && <AIPanel sidebarOpen={sidebarOpen} onClose={() => setShowAI(false)} onAction={runAI} loading={aiLoading} result={aiResult} />}
+
       {showNotes && <NotesPanel onClose={() => setShowNotes(false)} notesText={notesText} onChange={setNotesText} />}
       {showTimer && <TimerPanel onClose={() => setShowTimer(false)} timerSecs={timerSecs} timerRunning={timerRunning} timerInput={timerInput} onInputChange={setTimerInput} onStart={startTimer} onPause={pauseTimer} onReset={resetTimer} showNotes={showNotes} isHost={isHost} />}
       {showClear && <ClearModal onCancel={() => setShowClear(false)} onConfirm={handleClearConfirm} />}
