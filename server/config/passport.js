@@ -12,12 +12,17 @@ const generateToken = (id) =>
     expiresIn: process.env.JWT_EXPIRE,
   });
 
+let callbackURL = process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback";
+if (callbackURL.includes("/api/auth/google") && !callbackURL.includes("/api/auth/google/callback")) {
+  callbackURL = callbackURL.replace(/\/api\/auth\/google\/?$/, "/api/auth/google/callback");
+}
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
+      callbackURL: callbackURL,
     },
 
     asyncHandler(async (accessToken, refreshToken, profile, done) => {
