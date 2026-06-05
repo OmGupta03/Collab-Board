@@ -12,7 +12,7 @@ export const SocketProvider = ({ children }) => {
     // Only connect if user is logged in
     if (!user) return;
 
-    const s = io(import.meta.env.VITE_SOCKET_URL, {
+    const s = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
       auth: { token: user.token },
       transports: ["websocket"],
     });

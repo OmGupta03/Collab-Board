@@ -91,7 +91,7 @@ export default function LoginForm({ onLogin, loading }) {
       <button
         className="btn-google"
         type="button"
-        onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`} 
+        onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/google`} 
         style={{
           width: "100%", padding: "11px 16px", borderRadius: 12,
           border: "1.5px solid rgba(0,0,0,0.1)",
