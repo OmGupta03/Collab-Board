@@ -14,6 +14,15 @@ import { initSocket } from "./sockets/socketHandler.js";
 import passport from "./config/passport.js";
 
 dotenv.config();
+
+// Sanitize environment variables to trim trailing spaces or newlines from copy-paste errors
+const envKeysToTrim = ["CLIENT_URL", "MONGO_URI", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL"];
+envKeysToTrim.forEach(key => {
+  if (process.env[key]) {
+    process.env[key] = process.env[key].trim();
+  }
+});
+
 connectDB();
 
 const app    = express();
